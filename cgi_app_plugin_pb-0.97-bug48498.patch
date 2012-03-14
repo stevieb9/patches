@@ -1,0 +1,12 @@
+diff -urN CGI-Application-Plugin-PageBuilder-0.97/lib/CGI/Application/Plugin/PageBuilder.pm CGI-Application-Plugin-PageBuilder-0.97-fixed/lib/CGI/Application/Plugin/PageBuilder.pm
+--- CGI-Application-Plugin-PageBuilder-0.97/lib/CGI/Application/Plugin/PageBuilder.pm	2006-09-15 13:21:26.000000000 -0400
++++ CGI-Application-Plugin-PageBuilder-0.97-fixed/lib/CGI/Application/Plugin/PageBuilder.pm	2012-03-13 23:57:29.308258233 -0400
+@@ -116,7 +116,7 @@
+ 	my( $self, $param, $value ) = @_;
+ 
+ 	return unless $value;
+-	${$self->{__PB_TEMPLATE_LIST}}[$#{@{$self->{__PB__TEMPLATE_LIST}}}]->param( $param, $value );
++	${$self->{__PB_TEMPLATE_LIST}}[-1]->param( $param, $value );
+ 	return $self->pb_build();
+ }
+ 

@@ -1,0 +1,43 @@
+diff -urN Email-Valid-0.187/lib/Email/Valid.pm Email-Valid-0.187.new/lib/Email/Valid.pm
+--- Email-Valid-0.187/lib/Email/Valid.pm	2012-01-27 11:27:00.000000000 -0500
++++ Email-Valid-0.187.new/lib/Email/Valid.pm	2012-03-13 18:58:30.273470406 -0400
+@@ -286,7 +286,7 @@
+ sub _valid_local_part {
+   my ($self, $localpart) = @_;
+ 
+-  return 0 unless $localpart and length $localpart <= 64;
++  return 0 unless defined $localpart and length $localpart <= 64;
+ 
+   return 1;
+ }
+diff -urN Email-Valid-0.187/t/valid.t Email-Valid-0.187.new/t/valid.t
+--- Email-Valid-0.187/t/valid.t	2012-01-27 11:27:27.000000000 -0500
++++ Email-Valid-0.187.new/t/valid.t	2012-03-13 19:16:57.119508104 -0400
+@@ -1,7 +1,7 @@
+ #!perl
+ use strict;
+ 
+-use Test::More tests => 31;
++use Test::More tests => 33;
+ 
+ BEGIN {
+   use_ok('Email::Valid');
+@@ -80,6 +80,18 @@
+   "space between @ and domain is valid",
+ );
+ 
++is(
++  $v->address(-address => '1@example.com', -localpart => 1),
++  '1@example.com',
++  "localpart in true context succeeds",
++);
++
++is(
++  $v->address(-address => '0@example.com', -localpart => 1),
++  '0@example.com',
++  "localpart in false context is defined (bug 75736)",
++);
++
+ ok(
+   $v->address('-dashy@example.net'),
+   'an email can start with a dash',
