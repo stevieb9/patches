@@ -1,0 +1,104 @@
+diff -urN Email-Valid-0.186-orig/lib/Email/Valid.pm Email-Valid-0.186/lib/Email/Valid.pm
+--- Email-Valid-0.186-orig/lib/Email/Valid.pm	2012-01-22 11:18:47.000000000 -0500
++++ Email-Valid-0.186/lib/Email/Valid.pm	2012-01-26 10:44:15.000000000 -0500
+@@ -22,6 +22,7 @@
+   mxcheck  => 1,
+   tldcheck => 1,
+   local_rules => 1,
++  localpart	=> 1,
+ );
+ 
+ $NSLOOKUP_PAT = 'preference|serial|expire|mail\s+exchanger';
+@@ -58,6 +59,7 @@
+   $self->{fudge}       = 0;
+   $self->{fqdn}        = 1;
+   $self->{local_rules} = 0;
++  $self->{localpart}   = 1;
+   $self->{details}     = $Details = undef;
+ }
+ 
+@@ -280,6 +282,14 @@
+   1;
+ }
+ 
++sub _valid_local_part {
++	my ($self, $localpart) = @_;
++
++	return 0 unless $localpart and length $localpart <= 64;
++
++	return 1;
++}
++
+ sub _valid_domain_parts {
+   my ($self, $string) = @_;
+ 
+@@ -322,15 +332,26 @@
+ 
+   $addr or return $self->details('rfc822'); # This should never happen
+ 
++  if (length($addr->address) > 254) {
++	  return $self->details('address_too_long');
++  }
++
+   if ($args{local_rules}) {
+     $self->_local_rules( $addr->user, $addr->host )
+       or return $self->details('local_rules');
+   }
+ 
++  if ($args{localpart}) {
++	  $self->_valid_local_part($addr->user) > 0
++	  	or return $self->details('localpart');
++  }
++
+   if ($args{fqdn}) {
+-    no warnings 'uninitialized'; # valid domain parts might return undef
+-    $self->_valid_domain_parts($addr->host) > 1
+-      or return $self->details('fqdn');
++	my $domain_parts = $self->_valid_domain_parts($addr->host);
++
++	if (! $domain_parts or $domain_parts <= 1){
++		return $self->details('fqdn');
++	}
+   }
+ 
+   if ($args{tldcheck}) {
+diff -urN Email-Valid-0.186-orig/t/valid.t Email-Valid-0.186/t/valid.t
+--- Email-Valid-0.186-orig/t/valid.t	2012-01-22 11:15:51.000000000 -0500
++++ Email-Valid-0.186/t/valid.t	2012-01-26 10:32:15.000000000 -0500
+@@ -1,7 +1,7 @@
+ #!perl
+ use strict;
+ 
+-use Test::More tests => 24;
++use Test::More tests => 29;
+ 
+ BEGIN {
+   use_ok('Email::Valid');
+@@ -54,6 +54,27 @@
+   "comments nicely dropped from an address",
+ );
+ 
++is ($v->address(-address => 'user@example.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'),
++  undef,
++  "address with > 254 chars fails",
++);
++
++is($v->details, 'address_too_long', "details say address is too long");
++
++is(
++  $v->address(-address => 'somebody@example.com', -localpart => 1),
++  'somebody@example.com',
++  "localpart with 64 chars or less is valid",
++);
++
++is(
++  $v->address(-address => 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@example.com', -localpart => 1),
++  undef,
++  "localpart with 64 chars or more fails",
++);
++
++is($v->details, 'localpart', "details are localpart");
++
+ ok(
+   $v->address('somebody@ example.com'),
+   "space between @ and domain is valid",
