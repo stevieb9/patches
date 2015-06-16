@@ -1,0 +1,4 @@
+655c655
+<     if (defined (%{$objname}))
+---
+>     if (%{$objname})
